@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { pool } from '../db/config';
 import { createJobSchema } from '../schemas/job.schema';
 import { z } from 'zod';
@@ -43,7 +43,7 @@ export const submitJob = async (req: Request, res: Response): Promise<void> => {
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors } });
+      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.issues } });
       return;
     }
 

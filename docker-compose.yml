@@ -12,6 +12,56 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queue_user -d queueforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    command: npm run dev
+    container_name: queueforge_api
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: queue_user
+      DB_PASSWORD: queue_password
+      DB_NAME: queueforge
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  reaper:
+    build: .
+    command: npm run reaper
+    container_name: queueforge_reaper
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: queue_user
+      DB_PASSWORD: queue_password
+      DB_NAME: queueforge
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: npm run worker
+    deploy:
+      replicas: 3
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: queue_user
+      DB_PASSWORD: queue_password
+      DB_NAME: queueforge
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
