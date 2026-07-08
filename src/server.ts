@@ -19,7 +19,13 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+import http from 'http';
+import { setupWebSocket } from './websocket';
+
 // Start server
-app.listen(PORT, () => {
+const server = http.createServer(app);
+setupWebSocket(server);
+
+server.listen(PORT, () => {
   console.log(`QueueForge API Server running on port ${PORT}`);
 });

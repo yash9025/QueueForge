@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", ui-sans-serif, sans-serif;
+  
+  /* Warm light palette */
+  --color-cream-50: #faf9f6;
+  --color-cream-100: #f5f3eb;
+  --color-cream-200: #e9e4d5;
+  --color-cream-300: #d9d0bc;
+  
+  /* Rich dark chocolate for headers */
+  --color-mocha-900: #1c1008;
+  --color-mocha-800: #2e1c0e;
+  --color-mocha-700: #3e2612;
+  --color-mocha-600: #5c381a;
+  --color-mocha-500: #724621;
+  --color-mocha-400: #8b5a2b;
+  --color-mocha-200: #c49a6c;
+  --color-mocha-100: #e8d5b7;
+
+  /* Status colors */
+  --color-amber-vivid: #d97706;
+  --color-lime-vivid: #65a30d;
+  --color-red-vivid: #dc2626;
+  --color-sky-vivid: #0ea5e9;
+  --color-pending: #a8a29e;
+  --color-running: #d97706;
+  --color-completed: #65a30d;
+  --color-dead: #dc2626;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream-50);
+    color: var(--color-mocha-800);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background-color: var(--color-cream-300); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background-color: transparent; }
+}
+
+@layer utilities {
+  /* Live pulsing dot */
+  .live-dot {
+    animation: pulseDot 1.6s ease-in-out infinite;
+  }
+  /* Glow ring for active workers */
+  .glow-green {
+    box-shadow: 0 0 0 0 rgba(101, 163, 13, 0.4);
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+  .glow-amber {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5);
+    animation: glowPulseAmber 1.4s ease-in-out infinite;
+  }
+  /* Number flash when updated */
+  .num-flash {
+    animation: numFlash 0.5s ease-out;
+  }
+  /* Event row slide-in */
+  .animate-row-enter {
+    animation: rowIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Card hover */
+  .card-hover {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(92, 56, 26, 0.12);
+  }
+  /* Bar fill transition */
+  .bar-transition {
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Toast slide in */
+  .toast-enter {
+    animation: toastSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(101, 163, 13, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(101, 163, 13, 0); }
+}
+
+@keyframes glowPulseAmber {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+}
+
+@keyframes numFlash {
+  0% { transform: scale(1.15); color: var(--color-running); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(-8px); background: rgba(217, 119, 6, 0.08); }
+  to   { opacity: 1; transform: translateY(0); background: transparent; }
+}
+
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ─── Scrolling Ticker ────────────────────────────── */
+.ticker-track {
+  display: flex;
+  white-space: nowrap;
+  animation: tickerScroll 55s linear infinite;
+}
+
+.ticker-content {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: rgba(251, 191, 36, 0.65);
+  letter-spacing: 0.01em;
+  padding: 0 4px;
+}
+
+.ticker-sep {
+  margin: 0 16px;
+  color: rgba(251, 191, 36, 0.2);
+  font-size: 8px;
+}
+
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── Recruiter Guide Modal Animations ───────────── */
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.93) translateY(16px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.recruiter-bubble-wrap {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 100;
+  animation: bubbleFloat 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bubbleFloat {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes bubbleDropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.recruiter-bubble-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: linear-gradient(135deg, #2e1c0e 0%, #1c1008 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 10px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(251, 191, 36, 0.12);
+}
+
+.recruiter-blink-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 3px;
+  animation: bubbleBlink 1.8s ease-in-out infinite;
+}
+
+@keyframes bubbleBlink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6); }
+  50%       { opacity: 0.25; box-shadow: 0 0 0 5px rgba(251, 191, 36, 0); }
+}
+
+.recruiter-bubble-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fef3c7;
+  line-height: 1.3;
+}
+
+.recruiter-bubble-sub {
+  font-size: 10px;
+  color: rgba(251, 191, 36, 0.5);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
+.recruiter-bubble-arrow {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #2e1c0e;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+}

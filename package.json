@@ -7,6 +7,7 @@
     "dev": "tsx src/server.ts",
     "worker": "tsx src/worker.ts",
     "reaper": "tsx src/reaper.ts",
+    "seeder": "tsx src/demo-seeder.ts",
     "test": "tsx --test tests/**/*.test.ts",
     "seed": "tsx db/seed.ts"
   },
@@ -18,8 +19,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0",
+    "socket.io": "^4.8.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

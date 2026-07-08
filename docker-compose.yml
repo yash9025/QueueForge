@@ -63,5 +63,19 @@ services:
       postgres:
         condition: service_healthy
 
+  demo-seeder:
+    build: .
+    command: npx tsx src/demo-seeder.ts
+    container_name: queueforge_seeder
+    environment:
+      API_URL: http://api:3000
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: secret123
+      SEED_INTERVAL_MS: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
 volumes:
   postgres_data:
