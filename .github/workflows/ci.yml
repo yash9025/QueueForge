@@ -1,0 +1,70 @@
+name: QueueForge CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: queue_user
+          POSTGRES_PASSWORD: queue_password
+          POSTGRES_DB: queueforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+        cache: 'npm'
+
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Initialize Database
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: queue_user
+        DB_PASSWORD: queue_password
+        DB_NAME: queueforge
+      run: |
+        export PGPASSWORD=$DB_PASSWORD
+        psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f db/schema.sql
+        # No seed for tests, test file manages its own data
+
+    - name: Type Check (Backend)
+      run: npx tsc --noEmit
+
+    - name: Run Backend Tests
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: queue_user
+        DB_PASSWORD: queue_password
+        DB_NAME: queueforge
+      run: npm test
+
+    - name: Install dashboard dependencies
+      working-directory: ./dashboard
+      run: npm ci
+
+    - name: Build Dashboard
+      working-directory: ./dashboard
+      run: npm run build

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMetrics } from './hooks/useMetrics';
 import { RecruiterGuide } from './components/RecruiterGuide';
+import { ArchDiagram } from './components/ArchDiagram';
 import axios from 'axios';
 
 // ─── Animated counter ───────────────────────────────────────────────
@@ -74,15 +75,19 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
 }
 
 // ─── Stat Card ───────────────────────────────────────────────────────
-function StatCard({ label, value, accent, icon }: { label: string; value: number; accent: string; icon: string }) {
+function StatCard({ label, value, accent, icon, loading }: { label: string; value: number; accent: string; icon: string; loading?: boolean }) {
   return (
     <div className={`card-hover relative overflow-hidden bg-white rounded-xl border border-cream-200 px-5 py-4 shadow-sm`}>
       <div className={`absolute top-0 left-0 h-1 w-full ${accent}`} />
       <div className="text-[11px] uppercase tracking-widest text-mocha-400 font-mono mb-2">{label}</div>
       <div className="flex items-end justify-between">
-        <div className="text-3xl font-mono font-bold text-mocha-800">
-          <AnimatedNumber value={value} />
-        </div>
+        {loading ? (
+          <div className="h-9 w-20 bg-cream-200 animate-pulse rounded" />
+        ) : (
+          <div className="text-3xl font-mono font-bold text-mocha-800">
+            <AnimatedNumber value={value} />
+          </div>
+        )}
         <div className="text-2xl opacity-20 select-none">{icon}</div>
       </div>
     </div>
@@ -309,11 +314,11 @@ function App() {
 
         {/* ── Stat Cards ───────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <StatCard label="Throughput/min"  value={metrics.throughput}          accent="bg-lime-500"   icon="⚡" />
-          <StatCard label="Pending"         value={dist.pending ?? 0}           accent="bg-stone-400"  icon="⏳" />
-          <StatCard label="Running"         value={dist.running ?? 0}           accent="bg-amber-500"  icon="⚙️" />
-          <StatCard label="Dead Letter"     value={dist.dead_letter ?? 0}       accent="bg-red-500"    icon="☠️" />
-          <StatCard label="Workers Online"  value={metrics.workers.length}      accent="bg-sky-400"    icon="🖥" />
+          <StatCard label="Throughput/min"  value={metrics.throughput}          accent="bg-lime-500"   icon="⚡" loading={!isConnected && total === 1} />
+          <StatCard label="Pending"         value={dist.pending ?? 0}           accent="bg-stone-400"  icon="⏳" loading={!isConnected && total === 1} />
+          <StatCard label="Running"         value={dist.running ?? 0}           accent="bg-amber-500"  icon="⚙️" loading={!isConnected && total === 1} />
+          <StatCard label="Dead Letter"     value={dist.dead_letter ?? 0}       accent="bg-red-500"    icon="☠️" loading={!isConnected && total === 1} />
+          <StatCard label="Workers Online"  value={metrics.workers.length}      accent="bg-sky-400"    icon="🖥" loading={!isConnected && total === 1} />
         </div>
 
         {/* ── Charts Row ───────────────────────────────────── */}
@@ -399,8 +404,10 @@ function App() {
             </div>
             <div className="font-mono text-xs divide-y divide-cream-100 max-h-72 overflow-y-auto flex-1">
               {metrics.events.length === 0 ? (
-                <div className="flex items-center justify-center h-20 text-mocha-300">
-                  Waiting for events…
+                <div className="flex flex-col items-center justify-center h-48 text-mocha-300">
+                  <div className="text-4xl mb-3 opacity-20">📭</div>
+                  <p>No jobs processed yet.</p>
+                  <p className="text-[10px] mt-1 opacity-70">Inject a job or start the demo to see events.</p>
                 </div>
               ) : (
                 metrics.events.map((ev, idx) => (
@@ -417,6 +424,11 @@ function App() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* ── About Architecture ───────────────────────────── */}
+        <div className="card-hover bg-white rounded-xl border border-cream-200 shadow-sm overflow-hidden p-6">
+          <ArchDiagram />
         </div>
 
       </main>

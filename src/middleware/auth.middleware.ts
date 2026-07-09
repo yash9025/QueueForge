@@ -16,6 +16,11 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
 
   const token = authHeader.split(' ')[1];
 
+  if (!token) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
+    return;
+  }
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     // Attach the user payload to the request (casting as any to bypass strict typing for now)

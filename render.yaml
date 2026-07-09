@@ -1,0 +1,65 @@
+services:
+  - type: web
+    name: queueforge-api
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run dev
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: secret123
+      - key: SEED_JOBS
+        value: "false"
+
+  - type: worker
+    name: queueforge-worker-1
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: queueforge-api
+          envVarKey: DATABASE_URL
+
+  - type: worker
+    name: queueforge-worker-2
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: queueforge-api
+          envVarKey: DATABASE_URL
+
+  - type: worker
+    name: queueforge-worker-3
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run worker
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: queueforge-api
+          envVarKey: DATABASE_URL
+
+  - type: worker
+    name: queueforge-reaper
+    env: node
+    buildCommand: npm ci
+    startCommand: npm run reaper
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: queueforge-api
+          envVarKey: DATABASE_URL

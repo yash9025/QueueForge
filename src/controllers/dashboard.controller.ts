@@ -1,7 +1,7 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/config';
 
-export const getMetrics = async (req: Request, res: Response): Promise<void> => {
+export const getMetrics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const jobStats = await pool.query(`
       SELECT 
@@ -24,12 +24,11 @@ export const getMetrics = async (req: Request, res: Response): Promise<void> => 
       active_workers: parseInt(workerStats.rows[0].active_workers, 10)
     });
   } catch (error) {
-    console.error('Error fetching metrics:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch metrics' } });
+    next(error);
   }
 };
 
-export const getQueueJobs = async (req: Request, res: Response): Promise<void> => {
+export const getQueueJobs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const queueName = req.params.queue;
     const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
@@ -77,12 +76,11 @@ export const getQueueJobs = async (req: Request, res: Response): Promise<void> =
       }
     });
   } catch (error) {
-    console.error('Error fetching queue jobs:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch jobs' } });
+    next(error);
   }
 };
 
-export const getJobDetails = async (req: Request, res: Response): Promise<void> => {
+export const getJobDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const jobId = req.params.id;
 
@@ -99,12 +97,11 @@ export const getJobDetails = async (req: Request, res: Response): Promise<void> 
       events: eventsResult.rows
     });
   } catch (error) {
-    console.error('Error fetching job details:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch job details' } });
+    next(error);
   }
 };
 
-export const retryJob = async (req: Request, res: Response): Promise<void> => {
+export const retryJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const jobId = req.params.id;
 
@@ -128,7 +125,6 @@ export const retryJob = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json(result.rows[0]);
   } catch (error) {
-    console.error('Error retrying job:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to retry job' } });
+    next(error);
   }
 };

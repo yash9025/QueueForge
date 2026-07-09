@@ -1,9 +1,9 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/config';
 import { createJobSchema } from '../schemas/job.schema';
 import { z } from 'zod';
 
-export const submitJob = async (req: Request, res: Response): Promise<void> => {
+export const submitJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const queueName = req.params.queue;
 
   try {
@@ -47,7 +47,6 @@ export const submitJob = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    console.error('Error submitting job:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to submit job' } });
+    next(error);
   }
 };

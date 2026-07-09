@@ -3,7 +3,9 @@ import { createQueue } from '../controllers/queue.controller';
 import { submitJob } from '../controllers/job.controller';
 import { getMetrics, getQueueJobs, getJobDetails, retryJob } from '../controllers/dashboard.controller';
 import { login } from '../controllers/auth.controller';
+import { workerHeartbeat } from '../controllers/worker.controller';
 import { requireAuth } from '../middleware/auth.middleware';
+import { pool } from '../db/config';
 
 import rateLimit from 'express-rate-limit';
 
@@ -20,6 +22,15 @@ const jobSubmissionLimiter = rateLimit({
 
 // 🔓 Public Endpoints
 router.post('/auth/login', login);
+router.get('/health/live', (req, res) => { res.status(200).json({ status: 'ok' }); });
+router.get('/health/ready', async (req, res, next) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ready', db: 'connected' });
+  } catch (error) {
+    res.status(503).json({ status: 'error', db: 'disconnected' });
+  }
+});
 
 // 🔒 Secure all routes below this line
 router.use(requireAuth);
@@ -33,5 +44,8 @@ router.get('/metrics', getMetrics);
 router.get('/queues/:queue/jobs', getQueueJobs);
 router.get('/jobs/:id', getJobDetails);
 router.post('/jobs/:id/retry', retryJob);
+
+// Worker Endpoints
+router.post('/workers/heartbeat', workerHeartbeat);
 
 export default router;

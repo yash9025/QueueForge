@@ -1,9 +1,9 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { pool } from '../db/config';
 import { createQueueSchema } from '../schemas/queue.schema';
 import { z } from 'zod';
 
-export const createQueue = async (req: Request, res: Response): Promise<void> => {
+export const createQueue = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const validatedData = createQueueSchema.parse(req.body);
 
@@ -25,7 +25,6 @@ export const createQueue = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    console.error('Error creating queue:', error);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create queue' } });
+    next(error);
   }
 };
