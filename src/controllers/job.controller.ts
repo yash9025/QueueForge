@@ -5,9 +5,10 @@ import { z } from 'zod';
 
 export const submitJob = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const queueName = req.params.queue;
+  let validatedData: ReturnType<typeof createJobSchema.parse> | undefined;
 
   try {
-    const validatedData = createJobSchema.parse(req.body);
+    validatedData = createJobSchema.parse(req.body);
 
     const client = await pool.connect();
     try {
@@ -45,7 +46,7 @@ export const submitJob = async (req: Request, res: Response, next: NextFunction)
           validatedData.priority, 
           validatedData.max_attempts, 
           runAt,
-          validatedData.idempotency_key || null
+          validatedData.idempotency_key ?? null
         ]
       );
 
@@ -60,8 +61,8 @@ export const submitJob = async (req: Request, res: Response, next: NextFunction)
     }
 
     // Handle Idempotency Key violation (Postgres unique violation)
-    if ((error as any).code === '23505' && validatedData.idempotency_key) {
-      // Find the existing job
+    // validatedData is only defined if Zod parsing succeeded; the 23505 error comes from the INSERT, so it will always be defined here
+    if ((error as any).code === '23505' && validatedData?.idempotency_key) {
       const existingJobResult = await pool.query(
         'SELECT id, type, status, priority, max_attempts, run_at, idempotency_key, created_at FROM jobs WHERE queue_id = (SELECT id FROM queues WHERE name = $1) AND idempotency_key = $2',
         [queueName, validatedData.idempotency_key]
@@ -75,3 +76,4 @@ export const submitJob = async (req: Request, res: Response, next: NextFunction)
     next(error);
   }
 };
+

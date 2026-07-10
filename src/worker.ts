@@ -2,7 +2,6 @@ import { pool } from '../src/db/config';
 import { registry } from './registry';
 import { randomUUID } from 'crypto';
 import { logger } from './utils/logger';
-import { randomUUID } from 'crypto';
 
 const WORKER_ID = `worker-${randomUUID()}`;
 const POLL_INTERVAL = 2000; // 2 seconds
@@ -17,65 +16,90 @@ const calculateBackoffSeconds = (attempts: number) => {
   return baseDelay * Math.pow(2, attempts); // 5s, 10s, 20s, 40s...
 };
 
-async function processJob(job: any, client: any) {
-  logger.info(`\n[WORKER ${WORKER_ID}] 📦 Claimed job ${job.id} (Type: ${job.type}, Priority: ${job.priority})`);
-  
+// Each job gets its own dedicated connection from the pool for its write-back.
+// This isolates jobs from each other — one job's failure cannot roll back
+// another job's completed status. The claiming client is released after COMMIT.
+async function processJob(job: any) {
+  logger.info(`[WORKER ${WORKER_ID}] 📦 Claimed job ${job.id} (type: ${job.type}, priority: ${job.priority})`);
+
   const handler = registry[job.type];
 
   if (!handler) {
-    logger.error(`[WORKER ${WORKER_ID}] ❌ No handler found for job type: ${job.type}`);
-    await failJob(client, job.id, job.attempts, job.max_attempts, 'No handler registered');
+    logger.error(`[WORKER ${WORKER_ID}] ❌ No handler for job type "${job.type}" — moving to DLQ`);
+    await failJob(job.id, job.attempts, job.max_attempts, 'No handler registered for this job type');
     return;
   }
 
   try {
-    // 1. Execute the actual handler logic
+    // Run the actual business logic
     await handler(job.payload);
-    
-    // 2. Mark as completed on success
-    await client.query(
-      `UPDATE jobs SET status = 'completed', updated_at = NOW(), locked_by = NULL, locked_at = NULL WHERE id = $1`,
-      [job.id]
-    );
 
-    await client.query(
-      `INSERT INTO job_events (job_id, from_status, to_status, worker_id) VALUES ($1, $2, $3, $4)`,
-      [job.id, 'running', 'completed', WORKER_ID]
-    );
+    // Write success back to the DB on its own connection
+    const client = await pool.connect();
+    try {
+      await client.query(
+        `UPDATE jobs
+         SET status = 'completed', locked_by = NULL, locked_at = NULL
+         WHERE id = $1`,
+        [job.id]
+      );
+      await client.query(
+        `INSERT INTO job_events (job_id, from_status, to_status, worker_id)
+         VALUES ($1, 'running', 'completed', $2)`,
+        [job.id, WORKER_ID]
+      );
+      logger.info(`[WORKER ${WORKER_ID}] ✅ Job ${job.id} completed`);
+    } finally {
+      client.release();
+    }
 
   } catch (error: any) {
-    logger.error(`[WORKER ${WORKER_ID}] ❌ Job ${job.id} failed:`, error.message);
-    await failJob(client, job.id, job.attempts, job.max_attempts, error.message);
+    logger.error(`[WORKER ${WORKER_ID}] ❌ Job ${job.id} failed: ${error.message}`);
+    await failJob(job.id, job.attempts, job.max_attempts, error.message);
   }
 }
 
-async function failJob(client: any, jobId: string, currentAttempts: number, maxAttempts: number, errorMessage: string) {
+// Handles both retry-with-backoff and dead-letter promotion.
+// Uses its own pool connection so it is fully independent of processJob.
+async function failJob(jobId: string, currentAttempts: number, maxAttempts: number, errorMessage: string) {
   const newAttempts = currentAttempts + 1;
   const isDeadLetter = newAttempts >= maxAttempts;
   const nextStatus = isDeadLetter ? 'dead_letter' : 'pending';
-  
-  // Calculate next run_at for exponential backoff if it's going back to pending
-  let runAtSql = `NOW()`;
+
+  // Build the backoff interval inline; safe because delaySeconds is an integer
+  // computed internally — never from user input.
+  let runAtExpression = 'NOW()';
   if (!isDeadLetter) {
     const delaySeconds = calculateBackoffSeconds(newAttempts);
-    runAtSql = `NOW() + interval '${delaySeconds} seconds'`;
-    logger.info(`[WORKER ${WORKER_ID}] ⏳ Requeueing job ${jobId} (Attempt ${newAttempts}/${maxAttempts}). Will retry in ${delaySeconds}s.`);
+    runAtExpression = `NOW() + interval '${delaySeconds} seconds'`;
+    logger.info(`[WORKER ${WORKER_ID}] ⏳ Requeueing ${jobId} (attempt ${newAttempts}/${maxAttempts}) — retry in ${delaySeconds}s`);
   } else {
-    logger.error(`[WORKER ${WORKER_ID}] 💀 Job ${jobId} reached max attempts (${maxAttempts}). Moving to DLQ.`);
+    logger.error(`[WORKER ${WORKER_ID}] 💀 Job ${jobId} exhausted ${maxAttempts} attempts — moving to DLQ`);
   }
 
-  await client.query(
-    `UPDATE jobs 
-     SET status = $1, attempts = $2, last_error = $3, run_at = ${runAtSql}, updated_at = NOW(), locked_by = NULL, locked_at = NULL 
-     WHERE id = $4`,
-    [nextStatus, newAttempts, errorMessage, jobId]
-  );
-
-  await client.query(
-    `INSERT INTO job_events (job_id, from_status, to_status, worker_id) VALUES ($1, $2, $3, $4)`,
-    [jobId, 'running', nextStatus, WORKER_ID]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE jobs
+       SET status     = $1,
+           attempts   = $2,
+           last_error = $3,
+           run_at     = ${runAtExpression},
+           locked_by  = NULL,
+           locked_at  = NULL
+       WHERE id = $4`,
+      [nextStatus, newAttempts, errorMessage, jobId]
+    );
+    await client.query(
+      `INSERT INTO job_events (job_id, from_status, to_status, worker_id)
+       VALUES ($1, 'running', $2, $3)`,
+      [jobId, nextStatus, WORKER_ID]
+    );
+  } finally {
+    client.release();
+  }
 }
+
 
 async function startWorker() {
   logger.info(`[WORKER ${WORKER_ID}] 🚀 Starting worker. Polling every ${POLL_INTERVAL}ms...`);
@@ -90,7 +114,7 @@ async function startWorker() {
         [WORKER_ID]
       );
     } catch (err) {
-      logger.error(`[WORKER ${WORKER_ID}] Failed to send heartbeat`, err);
+      logger.error({ err }, `[WORKER ${WORKER_ID}] Failed to send heartbeat`);
     }
   }, 5000);
 
@@ -129,15 +153,16 @@ async function startWorker() {
         
         await client.query('COMMIT');
         
-        // Process jobs concurrently in this batch
-        await Promise.all(jobs.map(job => processJob(job, client)));
+        // Run all jobs in this batch concurrently. Each job manages
+        // its own pool connection internally, so they are fully isolated.
+        await Promise.all(jobs.map(job => processJob(job)));
       } else {
         await client.query('COMMIT');
       }
 
     } catch (err) {
       await client.query('ROLLBACK');
-      logger.error(`[WORKER ${WORKER_ID}] Error in poll loop:`, err);
+      logger.error({ err }, `[WORKER ${WORKER_ID}] Error in poll loop:`);
     } finally {
       client.release();
     }

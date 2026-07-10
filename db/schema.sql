@@ -52,3 +52,21 @@ CREATE TABLE IF NOT EXISTS api_keys (
     queue_id UUID REFERENCES queues(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ─── Auto-update trigger for jobs.updated_at ───────────────────────────────
+-- Instead of relying on every UPDATE statement to remember to set updated_at,
+-- this trigger fires automatically at the database level. It's the only
+-- production-safe approach — application code can never forget to update it.
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER jobs_set_updated_at
+  BEFORE UPDATE ON jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION set_updated_at();
+
