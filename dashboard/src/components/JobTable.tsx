@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { RotateCw, AlertTriangle } from 'lucide-react';
+import { RotateCw } from 'lucide-react';
 
 interface Job {
   id: string;
