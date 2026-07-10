@@ -19,8 +19,10 @@ CREATE TABLE IF NOT EXISTS jobs (
     locked_by TEXT,
     locked_at TIMESTAMPTZ,
     last_error TEXT,
+    idempotency_key VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (queue_id, idempotency_key)
 );
 
 CREATE TABLE IF NOT EXISTS workers (
@@ -43,3 +45,10 @@ CREATE TABLE IF NOT EXISTS job_events (
 CREATE INDEX IF NOT EXISTS idx_jobs_claim ON jobs (status, priority ASC, run_at ASC);
 CREATE INDEX IF NOT EXISTS idx_jobs_queue_id ON jobs (queue_id);
 CREATE INDEX IF NOT EXISTS idx_workers_heartbeat ON workers (last_heartbeat);
+
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key_hash TEXT NOT NULL,
+    queue_id UUID REFERENCES queues(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

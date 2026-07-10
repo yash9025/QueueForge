@@ -1,10 +1,14 @@
 import { pool } from '../src/db/config';
 import { registry } from './registry';
 import { randomUUID } from 'crypto';
+import { logger } from './utils/logger';
+import { randomUUID } from 'crypto';
 
 const WORKER_ID = `worker-${randomUUID()}`;
 const POLL_INTERVAL = 2000; // 2 seconds
 const BATCH_SIZE = 5;
+
+let isShuttingDown = false;
 
 // Helper to calculate exponential backoff delay (in minutes for this example, or seconds for testing)
 // Let's use seconds so we don't have to wait hours to test retries!
@@ -14,12 +18,12 @@ const calculateBackoffSeconds = (attempts: number) => {
 };
 
 async function processJob(job: any, client: any) {
-  console.log(`\n[WORKER ${WORKER_ID}] 📦 Claimed job ${job.id} (Type: ${job.type}, Priority: ${job.priority})`);
+  logger.info(`\n[WORKER ${WORKER_ID}] 📦 Claimed job ${job.id} (Type: ${job.type}, Priority: ${job.priority})`);
   
   const handler = registry[job.type];
 
   if (!handler) {
-    console.error(`[WORKER ${WORKER_ID}] ❌ No handler found for job type: ${job.type}`);
+    logger.error(`[WORKER ${WORKER_ID}] ❌ No handler found for job type: ${job.type}`);
     await failJob(client, job.id, job.attempts, job.max_attempts, 'No handler registered');
     return;
   }
@@ -40,7 +44,7 @@ async function processJob(job: any, client: any) {
     );
 
   } catch (error: any) {
-    console.error(`[WORKER ${WORKER_ID}] ❌ Job ${job.id} failed:`, error.message);
+    logger.error(`[WORKER ${WORKER_ID}] ❌ Job ${job.id} failed:`, error.message);
     await failJob(client, job.id, job.attempts, job.max_attempts, error.message);
   }
 }
@@ -55,9 +59,9 @@ async function failJob(client: any, jobId: string, currentAttempts: number, maxA
   if (!isDeadLetter) {
     const delaySeconds = calculateBackoffSeconds(newAttempts);
     runAtSql = `NOW() + interval '${delaySeconds} seconds'`;
-    console.log(`[WORKER ${WORKER_ID}] ⏳ Requeueing job ${jobId} (Attempt ${newAttempts}/${maxAttempts}). Will retry in ${delaySeconds}s.`);
+    logger.info(`[WORKER ${WORKER_ID}] ⏳ Requeueing job ${jobId} (Attempt ${newAttempts}/${maxAttempts}). Will retry in ${delaySeconds}s.`);
   } else {
-    console.error(`[WORKER ${WORKER_ID}] 💀 Job ${jobId} reached max attempts (${maxAttempts}). Moving to DLQ.`);
+    logger.error(`[WORKER ${WORKER_ID}] 💀 Job ${jobId} reached max attempts (${maxAttempts}). Moving to DLQ.`);
   }
 
   await client.query(
@@ -74,10 +78,10 @@ async function failJob(client: any, jobId: string, currentAttempts: number, maxA
 }
 
 async function startWorker() {
-  console.log(`[WORKER ${WORKER_ID}] 🚀 Starting worker. Polling every ${POLL_INTERVAL}ms...`);
+  logger.info(`[WORKER ${WORKER_ID}] 🚀 Starting worker. Polling every ${POLL_INTERVAL}ms...`);
 
   // Heartbeat loop (runs in background)
-  setInterval(async () => {
+  const heartbeatInterval = setInterval(async () => {
     try {
       await pool.query(
         `INSERT INTO workers (id, status, last_heartbeat) 
@@ -86,12 +90,12 @@ async function startWorker() {
         [WORKER_ID]
       );
     } catch (err) {
-      console.error(`[WORKER ${WORKER_ID}] Failed to send heartbeat`, err);
+      logger.error(`[WORKER ${WORKER_ID}] Failed to send heartbeat`, err);
     }
   }, 5000);
 
   // Main Polling Loop
-  while (true) {
+  while (!isShuttingDown) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -133,7 +137,7 @@ async function startWorker() {
 
     } catch (err) {
       await client.query('ROLLBACK');
-      console.error(`[WORKER ${WORKER_ID}] Error in poll loop:`, err);
+      logger.error(`[WORKER ${WORKER_ID}] Error in poll loop:`, err);
     } finally {
       client.release();
     }
@@ -141,14 +145,28 @@ async function startWorker() {
     // Wait before polling again to avoid hammering the DB when empty
     await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
   }
-}
 
-// Graceful shutdown handling
-process.on('SIGINT', async () => {
-  console.log(`\n[WORKER ${WORKER_ID}] Shutting down gracefully...`);
+  logger.info(`[WORKER ${WORKER_ID}] Graceful exit: no more jobs in flight. Cleaning up...`);
+  clearInterval(heartbeatInterval);
   await pool.query(`UPDATE workers SET status = 'offline' WHERE id = $1`, [WORKER_ID]);
   await pool.end();
   process.exit(0);
-});
+}
+
+// Graceful shutdown handling
+const handleShutdown = () => {
+  if (isShuttingDown) return;
+  logger.info(`\n[WORKER ${WORKER_ID}] 🛑 Received shutdown signal. Waiting for in-flight jobs to finish...`);
+  isShuttingDown = true;
+
+  // Hard timeout: force exit if jobs take too long to finish
+  setTimeout(() => {
+    logger.error(`[WORKER ${WORKER_ID}] 💥 Force quitting after 30s timeout.`);
+    process.exit(1);
+  }, 30000).unref();
+};
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
 
 startWorker();

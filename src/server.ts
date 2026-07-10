@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import { pool } from './db/config';
 import http from 'http';
 import { setupWebSocket } from './websocket';
+import { logger } from './utils/logger';
+import pinoHttp from 'pino-http';
 
 dotenv.config();
 
@@ -14,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(pinoHttp({ logger, autoLogging: false })); // Exclude noisy auto-logs, or set to true for everything
 
 // Apply routes
 app.use('/api/v1', apiRoutes);
@@ -30,7 +33,7 @@ app.get('/health', async (req, res) => {
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('[SERVER ERROR]', err);
+  logger.error({ err }, '[SERVER ERROR]');
   res.status(err.status || 500).json({
     error: {
       code: err.code || 'INTERNAL_SERVER_ERROR',
@@ -44,16 +47,16 @@ const server = http.createServer(app);
 setupWebSocket(server);
 
 server.listen(PORT, () => {
-  console.log(`QueueForge API Server running on port ${PORT}`);
+  logger.info(`QueueForge API Server running on port ${PORT}`);
 });
 
 // Graceful Shutdown
 const shutdown = async (signal: string) => {
-  console.log(`\n[${signal}] Shutting down gracefully...`);
+  logger.info(`\n[${signal}] Shutting down gracefully...`);
   server.close(async () => {
-    console.log('HTTP server closed.');
+    logger.info('HTTP server closed.');
     await pool.end();
-    console.log('Database pool closed.');
+    logger.info('Database pool closed.');
     process.exit(0);
   });
 };
