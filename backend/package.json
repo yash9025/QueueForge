@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "start:reaper": "node dist/reaper.js",
+    "start:prod": "concurrently \"npm run start\" \"npm run start:worker\" \"npm run start:reaper\"",
     "worker": "tsx src/worker.ts",
     "reaper": "tsx src/reaper.ts",
     "seeder": "tsx src/demo-seeder.ts",
@@ -21,6 +22,7 @@
   "type": "module",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "concurrently": "^10.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

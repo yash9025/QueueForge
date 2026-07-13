@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { api as axios } from '../api';
 import { RotateCw } from 'lucide-react';
 
 interface Job {

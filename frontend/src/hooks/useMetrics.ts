@@ -33,7 +33,8 @@ export function useMetrics() {
   const [sparkline, setSparkline] = useState<number[]>(Array.from({ length: 40 }, () => 0));
 
   useEffect(() => {
-    const socket = io('/', { path: '/socket.io' });
+    const socketUrl = import.meta.env.VITE_API_URL || '';
+    const socket = io(socketUrl, { path: '/socket.io' });
 
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));

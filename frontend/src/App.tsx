@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMetrics } from './hooks/useMetrics';
 import { RecruiterGuide } from './components/RecruiterGuide';
 import { ArchDiagram } from './components/ArchDiagram';
-import axios from 'axios';
+import { api as axios } from './api';
 
 // ─── Animated counter ───────────────────────────────────────────────
 function AnimatedNumber({ value }: { value: number }) {
