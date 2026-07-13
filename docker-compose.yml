@@ -19,7 +19,7 @@ services:
       retries: 5
 
   api:
-    build: .
+    build: ./backend
     command: npm run dev
     container_name: queueforge_api
     ports:
@@ -35,7 +35,7 @@ services:
         condition: service_healthy
 
   reaper:
-    build: .
+    build: ./backend
     command: npm run reaper
     container_name: queueforge_reaper
     environment:
@@ -49,7 +49,7 @@ services:
         condition: service_healthy
 
   worker:
-    build: .
+    build: ./backend
     command: npm run worker
     deploy:
       replicas: 3
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
 
   demo-seeder:
-    build: .
+    build: ./backend
     command: npx tsx src/demo-seeder.ts
     container_name: queueforge_seeder
     environment:
