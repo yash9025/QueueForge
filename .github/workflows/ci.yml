@@ -46,10 +46,11 @@ jobs:
         DB_NAME: queueforge
       run: |
         export PGPASSWORD=$DB_PASSWORD
-        psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f db/schema.sql
+        psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f backend/db/schema.sql
         # No seed for tests, test file manages its own data
 
     - name: Type Check (Backend)
+      working-directory: ./backend
       run: npx tsc --noEmit
 
     - name: Run Backend Tests
@@ -59,12 +60,7 @@ jobs:
         DB_USER: queue_user
         DB_PASSWORD: queue_password
         DB_NAME: queueforge
-      run: npm test
-
-    - name: Install dashboard dependencies
-      working-directory: ./dashboard
-      run: npm ci
+      run: npm test --workspace=backend
 
     - name: Build Dashboard
-      working-directory: ./dashboard
-      run: npm run build
+      run: npm run build --workspace=frontend
