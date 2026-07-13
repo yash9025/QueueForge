@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "start:worker": "node dist/worker.js",
     "start:reaper": "node dist/reaper.js",
-    "start:prod": "concurrently \"npm run start\" \"npm run start:worker\" \"npm run start:reaper\"",
+    "start:prod": "concurrently \"npm run start\" \"npm run start:worker\" \"npm run start:worker\" \"npm run start:worker\" \"npm run start:reaper\"",
     "worker": "tsx src/worker.ts",
     "reaper": "tsx src/reaper.ts",
     "seeder": "tsx src/demo-seeder.ts",

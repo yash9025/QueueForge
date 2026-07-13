@@ -28,6 +28,49 @@ export const getMetrics = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const getHistoricalMetrics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    // 30 minute timeframe by default
+    const timeframeMinutes = parseInt(req.query.timeframe as string || '30', 10);
+    
+    // Get minute-by-minute breakdown of job completions and failures
+    const historyResult = await pool.query(`
+      SELECT 
+        date_trunc('minute', created_at) as timestamp,
+        to_status as status,
+        COUNT(*) as count
+      FROM job_events
+      WHERE created_at > NOW() - INTERVAL '1 minute' * $1
+      AND to_status IN ('completed', 'dead_letter')
+      GROUP BY 1, 2
+      ORDER BY 1 ASC
+    `, [timeframeMinutes]);
+
+    // Format the data for Recharts:
+    // [{ time: "10:00", completed: 5, dead_letter: 0 }, ...]
+    const metricsMap = new Map<string, { time: string, completed: number, dead_letter: number }>();
+
+    historyResult.rows.forEach(row => {
+      // row.timestamp is a Date object (pg parses it)
+      const d = new Date(row.timestamp);
+      // Format as HH:MM for chart labels
+      const timeStr = \`\${d.getHours().toString().padStart(2, '0')}:\${d.getMinutes().toString().padStart(2, '0')}\`;
+      
+      if (!metricsMap.has(timeStr)) {
+        metricsMap.set(timeStr, { time: timeStr, completed: 0, dead_letter: 0 });
+      }
+      
+      const point = metricsMap.get(timeStr)!;
+      if (row.status === 'completed') point.completed = parseInt(row.count, 10);
+      if (row.status === 'dead_letter') point.dead_letter = parseInt(row.count, 10);
+    });
+
+    res.status(200).json(Array.from(metricsMap.values()));
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getQueueJobs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const queueName = req.params.queue;

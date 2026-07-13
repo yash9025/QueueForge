@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS job_events (
 CREATE INDEX IF NOT EXISTS idx_jobs_claim ON jobs (status, priority ASC, run_at ASC);
 CREATE INDEX IF NOT EXISTS idx_jobs_queue_id ON jobs (queue_id);
 CREATE INDEX IF NOT EXISTS idx_workers_heartbeat ON workers (last_heartbeat);
+CREATE INDEX IF NOT EXISTS idx_job_events_created_at ON job_events (created_at);
 
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

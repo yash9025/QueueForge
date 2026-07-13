@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMetrics } from './hooks/useMetrics';
 import { RecruiterGuide } from './components/RecruiterGuide';
 import { ArchDiagram } from './components/ArchDiagram';
+import { AnalyticsCharts } from './components/AnalyticsCharts';
 import { api as axios } from './api';
 
 // ─── Animated counter ───────────────────────────────────────────────
@@ -320,6 +321,9 @@ function App() {
           <StatCard label="Dead Letter"     value={dist.dead_letter ?? 0}       accent="bg-red-500"    icon="☠️" loading={!isConnected && total === 1} />
           <StatCard label="Workers Online"  value={metrics.workers.length}      accent="bg-sky-400"    icon="🖥" loading={!isConnected && total === 1} />
         </div>
+
+        {/* ── Advanced Analytics Charts ───────────────────────────────────── */}
+        <AnalyticsCharts />
 
         {/* ── Charts Row ───────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
