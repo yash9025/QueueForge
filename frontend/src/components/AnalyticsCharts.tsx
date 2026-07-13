@@ -32,16 +32,16 @@ export function AnalyticsCharts() {
 
   if (loading && data.length === 0) {
     return (
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6 h-64 flex items-center justify-center animate-pulse">
-        <span className="text-white/40 font-mono text-sm">Loading historical data...</span>
+      <div className="card-hover bg-white border border-cream-200 rounded-xl p-6 h-64 flex items-center justify-center animate-pulse mb-1">
+        <span className="text-mocha-400 font-mono text-sm">Loading historical data...</span>
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6 h-64 flex items-center justify-center">
-        <span className="text-white/40 font-mono text-sm">No historical data in the last 30 minutes.</span>
+      <div className="card-hover bg-white border border-cream-200 shadow-sm rounded-xl p-6 h-64 flex items-center justify-center mb-1">
+        <span className="text-mocha-400 font-mono text-sm">No historical data in the last 30 minutes.</span>
       </div>
     );
   }
