@@ -8,14 +8,20 @@ interface HistoricalMetric {
   dead_letter: number;
 }
 
-export function AnalyticsCharts() {
+interface AnalyticsChartsProps {
+  selectedQueue: string;
+}
+
+export function AnalyticsCharts({ selectedQueue }: AnalyticsChartsProps) {
   const [data, setData] = useState<HistoricalMetric[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timeframe, setTimeframe] = useState<'30' | '1440' | 'all'>('30');
 
   useEffect(() => {
     const fetchHistory = async () => {
+      if (!selectedQueue) return;
       try {
-        const res = await api.get('/metrics/history?timeframe=30');
+        const res = await api.get(`/metrics/history?timeframe=${timeframe}&queue=${selectedQueue}`);
         setData(res.data);
       } catch (err) {
         console.error('Failed to fetch historical metrics', err);
@@ -28,7 +34,7 @@ export function AnalyticsCharts() {
     // Poll every 10 seconds for updated history
     const interval = setInterval(fetchHistory, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedQueue, timeframe]);
 
   if (loading && data.length === 0) {
     return (
@@ -47,8 +53,33 @@ export function AnalyticsCharts() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-1">
-      {/* Throughput Area Chart */}
+    <div className="mb-8">
+      {/* Timeframe Toggle */}
+      <div className="flex justify-end mb-3">
+        <div className="inline-flex bg-cream-100 rounded-lg p-1 border border-cream-200">
+          <button 
+            onClick={() => setTimeframe('30')}
+            className={`px-3 py-1.5 text-xs font-mono font-semibold rounded-md transition-all ${timeframe === '30' ? 'bg-white shadow-sm text-mocha-800' : 'text-mocha-400 hover:text-mocha-600'}`}
+          >
+            30 Min
+          </button>
+          <button 
+            onClick={() => setTimeframe('1440')}
+            className={`px-3 py-1.5 text-xs font-mono font-semibold rounded-md transition-all ${timeframe === '1440' ? 'bg-white shadow-sm text-mocha-800' : 'text-mocha-400 hover:text-mocha-600'}`}
+          >
+            24 Hours
+          </button>
+          <button 
+            onClick={() => setTimeframe('all')}
+            className={`px-3 py-1.5 text-xs font-mono font-semibold rounded-md transition-all ${timeframe === 'all' ? 'bg-white shadow-sm text-mocha-800' : 'text-mocha-400 hover:text-mocha-600'}`}
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-1">
+        {/* Throughput Area Chart */}
       <div className="card-hover bg-white rounded-xl border border-cream-200 shadow-sm p-5">
         <h3 className="text-sm font-semibold text-mocha-800 mb-4">Throughput History (Last 30 Min)</h3>
         <div className="h-48">

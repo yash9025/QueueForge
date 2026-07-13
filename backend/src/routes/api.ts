@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createQueue } from '../controllers/queue.controller';
+import { createQueue, getQueues } from '../controllers/queue.controller';
 import { submitJob } from '../controllers/job.controller';
 import { getMetrics, getHistoricalMetrics, getQueueJobs, getJobDetails, retryJob } from '../controllers/dashboard.controller';
 import { login } from '../controllers/auth.controller';
@@ -36,6 +36,7 @@ router.get('/health/ready', async (req, res, next) => {
 router.use(requireAuth);
 
 // Queue Endpoints
+router.get('/queues', getQueues);
 router.post('/queues', createQueue);
 router.post('/queues/:queue/jobs', jobSubmissionLimiter, submitJob);
 

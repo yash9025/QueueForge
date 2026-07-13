@@ -3,6 +3,7 @@ import { useMetrics } from './hooks/useMetrics';
 import { RecruiterGuide } from './components/RecruiterGuide';
 import { ArchDiagram } from './components/ArchDiagram';
 import { AnalyticsCharts } from './components/AnalyticsCharts';
+import { QueueSelector } from './components/QueueSelector';
 import { api as axios } from './api';
 
 // ─── Animated counter ───────────────────────────────────────────────
@@ -104,6 +105,7 @@ function App() {
   const [time, setTime] = useState('--:--:--');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [demoMode, setDemoMode] = useState(false);
+  const [selectedQueue, setSelectedQueue] = useState<string>('');
   const demoInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastId = useRef(0);
   const prevEventCount = useRef(0);
@@ -115,9 +117,9 @@ function App() {
 
   // Demo mode: auto-inject jobs every 2 seconds
   useEffect(() => {
-    if (demoMode && token) {
+    if (demoMode && token && selectedQueue) {
       demoInterval.current = setInterval(() => {
-        axios.post('/api/v1/queues/emails/jobs',
+        axios.post(`/api/v1/queues/${selectedQueue}/jobs`,
           { type: ['welcome_email', 'password_reset', 'weekly_digest'][Math.floor(Math.random() * 3)], payload: { demo: true } },
           { headers: { Authorization: `Bearer ${token}` } }
         ).catch(() => {});
@@ -127,7 +129,7 @@ function App() {
       if (demoInterval.current) clearInterval(demoInterval.current);
     }
     return () => { if (demoInterval.current) clearInterval(demoInterval.current); };
-  }, [demoMode, token]);
+  }, [demoMode, token, selectedQueue]);
 
   // Toast when new events arrive
   useEffect(() => {
@@ -168,12 +170,16 @@ function App() {
   };
 
   const submitTestJob = async () => {
+    if (!selectedQueue) {
+      pushToast('Please select a queue first', 'bg-red-50 border-red-200 text-red-700');
+      return;
+    }
     try {
-      await axios.post('/api/v1/queues/emails/jobs',
+      await axios.post(`/api/v1/queues/${selectedQueue}/jobs`,
         { type: 'welcome_email', payload: { test: true } },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      pushToast('Job injected into queue ✓', 'bg-amber-50 border-amber-200 text-amber-800');
+      pushToast(`Job injected into ${selectedQueue} ✓`, 'bg-amber-50 border-amber-200 text-amber-800');
     } catch {
       pushToast('Failed to inject job', 'bg-red-50 border-red-200 text-red-700');
     }
@@ -244,7 +250,8 @@ function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+            <QueueSelector selectedQueue={selectedQueue} onSelectQueue={setSelectedQueue} />
+
             {/* Demo Mode Toggle */}
             <div className="relative">
               <button
@@ -323,7 +330,7 @@ function App() {
         </div>
 
         {/* ── Advanced Analytics Charts ───────────────────────────────────── */}
-        <AnalyticsCharts />
+        <AnalyticsCharts selectedQueue={selectedQueue} />
 
         {/* ── Charts Row ───────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

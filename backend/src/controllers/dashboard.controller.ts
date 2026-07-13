@@ -3,15 +3,24 @@ import { pool } from '../db/config';
 
 export const getMetrics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const jobStats = await pool.query(`
+    let queryParams: any[] = [];
+    let jobStatsQuery = `
       SELECT 
         q.name as queue_name,
         j.status,
         COUNT(*) as count
       FROM jobs j
       JOIN queues q ON j.queue_id = q.id
-      GROUP BY q.name, j.status
-    `);
+    `;
+    
+    if (req.query.queue) {
+      jobStatsQuery += ` WHERE q.name = $1 `;
+      queryParams.push(req.query.queue);
+    }
+    
+    jobStatsQuery += ` GROUP BY q.name, j.status`;
+
+    const jobStats = await pool.query(jobStatsQuery, queryParams);
 
     const workerStats = await pool.query(`
       SELECT COUNT(*) as active_workers 
@@ -30,31 +39,54 @@ export const getMetrics = async (req: Request, res: Response, next: NextFunction
 
 export const getHistoricalMetrics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // 30 minute timeframe by default
-    const timeframeMinutes = parseInt(req.query.timeframe as string || '30', 10);
+    const timeframeParam = req.query.timeframe as string || '30';
+    const queueName = req.query.queue as string;
     
-    // Get minute-by-minute breakdown of job completions and failures
-    const historyResult = await pool.query(`
+    const isAllTime = timeframeParam === 'all';
+    const timeframeMinutes = isAllTime ? 0 : parseInt(timeframeParam, 10);
+    const timeGroup = isAllTime ? 'hour' : 'minute';
+    
+    let queryStr = `
       SELECT 
-        date_trunc('minute', created_at) as timestamp,
-        to_status as status,
+        date_trunc('${timeGroup}', e.created_at) as timestamp,
+        e.to_status as status,
         COUNT(*) as count
-      FROM job_events
-      WHERE created_at > NOW() - INTERVAL '1 minute' * $1
-      AND to_status IN ('completed', 'dead_letter')
-      GROUP BY 1, 2
-      ORDER BY 1 ASC
-    `, [timeframeMinutes]);
+      FROM job_events e
+      JOIN jobs j ON e.job_id = j.id
+      JOIN queues q ON j.queue_id = q.id
+      WHERE e.to_status IN ('completed', 'dead_letter')
+    `;
+    
+    const params: any[] = [];
+    
+    if (!isAllTime) {
+      params.push(timeframeMinutes);
+      queryStr += ` AND e.created_at > NOW() - INTERVAL '1 minute' * $${params.length}`;
+    }
+    
+    if (queueName) {
+      params.push(queueName);
+      queryStr += ` AND q.name = $${params.length}`;
+    }
+    
+    queryStr += ` GROUP BY 1, 2 ORDER BY 1 ASC`;
 
-    // Format the data for Recharts:
-    // [{ time: "10:00", completed: 5, dead_letter: 0 }, ...]
+    const historyResult = await pool.query(queryStr, params);
+
     const metricsMap = new Map<string, { time: string, completed: number, dead_letter: number }>();
 
     historyResult.rows.forEach(row => {
-      // row.timestamp is a Date object (pg parses it)
       const d = new Date(row.timestamp);
-      // Format as HH:MM for chart labels
-      const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      
+      let timeStr = '';
+      if (isAllTime) {
+        // e.g. "Jul 14 14:00"
+        const month = d.toLocaleString('en-US', { month: 'short' });
+        timeStr = `${month} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:00`;
+      } else {
+        // e.g. "14:35"
+        timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      }
       
       if (!metricsMap.has(timeStr)) {
         metricsMap.set(timeStr, { time: timeStr, completed: 0, dead_letter: 0 });

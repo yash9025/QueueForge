@@ -3,6 +3,15 @@ import { pool } from '../db/config';
 import { createQueueSchema } from '../schemas/queue.schema';
 import { z } from 'zod';
 
+export const getQueues = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await pool.query('SELECT name, created_at FROM queues ORDER BY created_at ASC');
+    res.status(200).json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createQueue = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const validatedData = createQueueSchema.parse(req.body);
