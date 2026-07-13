@@ -5,6 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx src/server.ts",
+    "build": "tsup src/server.ts src/worker.ts src/reaper.ts --format esm --clean",
+    "start": "node dist/server.js",
+    "start:worker": "node dist/worker.js",
+    "start:reaper": "node dist/reaper.js",
     "worker": "tsx src/worker.ts",
     "reaper": "tsx src/reaper.ts",
     "seeder": "tsx src/demo-seeder.ts",
@@ -36,6 +40,7 @@
     "@types/node": "^26.1.0",
     "@types/pg": "^8.20.0",
     "@types/pino-http": "^5.8.4",
+    "tsup": "^8.5.1",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3"
   }
