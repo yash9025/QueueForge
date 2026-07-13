@@ -54,7 +54,7 @@ export const getHistoricalMetrics = async (req: Request, res: Response, next: Ne
       // row.timestamp is a Date object (pg parses it)
       const d = new Date(row.timestamp);
       // Format as HH:MM for chart labels
-      const timeStr = \`\${d.getHours().toString().padStart(2, '0')}:\${d.getMinutes().toString().padStart(2, '0')}\`;
+      const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
       
       if (!metricsMap.has(timeStr)) {
         metricsMap.set(timeStr, { time: timeStr, completed: 0, dead_letter: 0 });
