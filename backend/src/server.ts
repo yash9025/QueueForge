@@ -23,6 +23,16 @@ app.use(pinoHttp({ logger, autoLogging: false })); // Exclude noisy auto-logs, o
 // Apply routes
 app.use('/api/v1', apiRoutes);
 
+// Root endpoint for simple browser checks
+app.get('/', (req, res) => {
+  res.status(200).json({
+    name: 'QueueForge API',
+    status: 'online',
+    version: '1.0.0',
+    message: 'Welcome to QueueForge! The API is fully operational.'
+  });
+});
+
 // Health check endpoint (Readiness)
 app.get('/health', async (req, res) => {
   try {

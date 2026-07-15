@@ -17,7 +17,7 @@ export function QueueSelector({ selectedQueue, onSelectQueue }: QueueSelectorPro
 
   const fetchQueues = async () => {
     try {
-      const res = await api.get('/queues');
+      const res = await api.get('/api/v1/queues');
       setQueues(res.data);
       if (res.data.length > 0 && !selectedQueue) {
         onSelectQueue(res.data[0].name);
@@ -38,7 +38,7 @@ export function QueueSelector({ selectedQueue, onSelectQueue }: QueueSelectorPro
     e.preventDefault();
     if (!newQueueName.trim()) return;
     try {
-      await api.post('/queues', { name: newQueueName.trim() });
+      await api.post('/api/v1/queues', { name: newQueueName.trim() });
       await fetchQueues();
       onSelectQueue(newQueueName.trim());
       setNewQueueName('');

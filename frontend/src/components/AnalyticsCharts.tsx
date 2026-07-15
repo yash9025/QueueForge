@@ -21,7 +21,7 @@ export function AnalyticsCharts({ selectedQueue }: AnalyticsChartsProps) {
     const fetchHistory = async () => {
       if (!selectedQueue) return;
       try {
-        const res = await api.get(`/metrics/history?timeframe=${timeframe}&queue=${selectedQueue}`);
+        const res = await api.get(`/api/v1/metrics/history?timeframe=${timeframe}&queue=${selectedQueue}`);
         setData(res.data);
       } catch (err) {
         console.error('Failed to fetch historical metrics', err);
