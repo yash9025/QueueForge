@@ -250,6 +250,7 @@ function App() {
             </div>
           </div>
 
+          <div className="flex items-center gap-4">
             <QueueSelector selectedQueue={selectedQueue} onSelectQueue={setSelectedQueue} />
 
             {/* Demo Mode Toggle */}

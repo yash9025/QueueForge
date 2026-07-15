@@ -122,6 +122,7 @@ export function AnalyticsCharts({ selectedQueue }: AnalyticsChartsProps) {
           </ResponsiveContainer>
         </div>
       </div>
+      </div>
     </div>
   );
 }
