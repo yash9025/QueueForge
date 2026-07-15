@@ -8,16 +8,19 @@ interface Queue {
 interface QueueSelectorProps {
   selectedQueue: string;
   onSelectQueue: (queue: string) => void;
+  token: string;
 }
 
-export function QueueSelector({ selectedQueue, onSelectQueue }: QueueSelectorProps) {
+export function QueueSelector({ selectedQueue, onSelectQueue, token }: QueueSelectorProps) {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newQueueName, setNewQueueName] = useState('');
 
   const fetchQueues = async () => {
     try {
-      const res = await api.get('/api/v1/queues');
+      const res = await api.get('/api/v1/queues', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setQueues(res.data);
       if (res.data.length > 0 && !selectedQueue) {
         onSelectQueue(res.data[0].name);
@@ -38,7 +41,10 @@ export function QueueSelector({ selectedQueue, onSelectQueue }: QueueSelectorPro
     e.preventDefault();
     if (!newQueueName.trim()) return;
     try {
-      await api.post('/api/v1/queues', { name: newQueueName.trim() });
+      await api.post('/api/v1/queues', 
+        { name: newQueueName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       await fetchQueues();
       onSelectQueue(newQueueName.trim());
       setNewQueueName('');

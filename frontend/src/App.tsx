@@ -251,7 +251,7 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <QueueSelector selectedQueue={selectedQueue} onSelectQueue={setSelectedQueue} />
+            <QueueSelector selectedQueue={selectedQueue} onSelectQueue={setSelectedQueue} token={token} />
 
             {/* Demo Mode Toggle */}
             <div className="relative">
@@ -331,7 +331,7 @@ function App() {
         </div>
 
         {/* ── Advanced Analytics Charts ───────────────────────────────────── */}
-        <AnalyticsCharts selectedQueue={selectedQueue} />
+        <AnalyticsCharts selectedQueue={selectedQueue} token={token} />
 
         {/* ── Charts Row ───────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

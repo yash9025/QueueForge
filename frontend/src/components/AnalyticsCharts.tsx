@@ -10,9 +10,10 @@ interface HistoricalMetric {
 
 interface AnalyticsChartsProps {
   selectedQueue: string;
+  token: string;
 }
 
-export function AnalyticsCharts({ selectedQueue }: AnalyticsChartsProps) {
+export function AnalyticsCharts({ selectedQueue, token }: AnalyticsChartsProps) {
   const [data, setData] = useState<HistoricalMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<'30' | '1440' | 'all'>('30');
@@ -21,7 +22,9 @@ export function AnalyticsCharts({ selectedQueue }: AnalyticsChartsProps) {
     const fetchHistory = async () => {
       if (!selectedQueue) return;
       try {
-        const res = await api.get(`/api/v1/metrics/history?timeframe=${timeframe}&queue=${selectedQueue}`);
+        const res = await api.get(`/api/v1/metrics/history?timeframe=${timeframe}&queue=${selectedQueue}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setData(res.data);
       } catch (err) {
         console.error('Failed to fetch historical metrics', err);
