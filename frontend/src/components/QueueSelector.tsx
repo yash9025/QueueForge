@@ -56,41 +56,41 @@ export function QueueSelector({ selectedQueue, onSelectQueue, token }: QueueSele
 
   return (
     <div className="flex items-center gap-2">
-      <div className="relative group">
+      <div className="relative group shadow-sm">
         <select
           value={selectedQueue}
           onChange={(e) => onSelectQueue(e.target.value)}
-          className="appearance-none bg-white/10 border border-white/20 text-white/90 text-xs font-mono font-semibold rounded-lg px-3 py-1.5 pr-8 hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-lime-500/50 cursor-pointer min-w-[120px]"
+          className="appearance-none bg-mocha-800/80 backdrop-blur-md border border-white/10 text-white text-sm font-semibold rounded-lg px-4 py-1.5 pr-10 hover:bg-mocha-700/80 transition-all focus:outline-none focus:border-lime-500 shadow-inner cursor-pointer min-w-[150px]"
         >
-          <option value="" disabled className="text-black">Select Queue...</option>
+          <option value="" disabled className="text-mocha-800">Select Queue...</option>
           {queues.map((q) => (
-            <option key={q.name} value={q.name} className="text-black">
+            <option key={q.name} value={q.name} className="text-mocha-800 font-semibold py-1">
               {q.name}
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/50 group-hover:text-white/80">
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/50 group-hover:text-white/80 transition-colors">
           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
         </div>
       </div>
 
       {isCreating ? (
-        <form onSubmit={handleCreateQueue} className="flex items-center gap-1">
+        <form onSubmit={handleCreateQueue} className="flex items-center gap-1 bg-mocha-800/50 p-1 rounded-lg border border-white/10 shadow-inner">
           <input
             type="text"
             value={newQueueName}
             onChange={(e) => setNewQueueName(e.target.value)}
             placeholder="queue-name"
             autoFocus
-            className="w-24 px-2 py-1.5 text-xs font-mono rounded bg-white/10 border border-white/30 text-white focus:outline-none focus:border-lime-500"
+            className="w-28 px-3 py-1 text-sm font-semibold rounded bg-white/5 border border-transparent text-white placeholder-white/30 focus:outline-none focus:bg-white/10 focus:border-white/20 transition-all"
           />
-          <button type="submit" className="px-2 py-1.5 bg-lime-500/20 text-lime-300 border border-lime-500/50 rounded text-xs font-bold hover:bg-lime-500/30">✓</button>
-          <button type="button" onClick={() => setIsCreating(false)} className="px-2 py-1.5 bg-white/10 text-white/60 border border-white/20 rounded text-xs font-bold hover:bg-white/20">✕</button>
+          <button type="submit" className="px-2.5 py-1 bg-lime-500/20 text-lime-400 rounded text-sm font-bold hover:bg-lime-500/30 transition-colors">✓</button>
+          <button type="button" onClick={() => setIsCreating(false)} className="px-2.5 py-1 bg-white/5 text-white/50 rounded text-sm font-bold hover:bg-white/10 hover:text-white/80 transition-colors">✕</button>
         </form>
       ) : (
         <button
           onClick={() => setIsCreating(true)}
-          className="px-2 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all border bg-white/10 border-white/20 text-white/60 hover:text-white/90 hover:bg-white/20"
+          className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border border-dashed border-white/30 text-white/50 hover:text-white hover:border-white/50 hover:bg-white/5 shadow-sm"
           title="Create New Queue"
         >
           + Queue
