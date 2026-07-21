@@ -43,6 +43,11 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Ping endpoint for cron jobs
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error({ err }, '[SERVER ERROR]');
