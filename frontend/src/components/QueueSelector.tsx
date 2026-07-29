@@ -35,7 +35,7 @@ export function QueueSelector({ selectedQueue, onSelectQueue, token }: QueueSele
     // Poll every 30s to catch newly created queues by other users
     const interval = setInterval(fetchQueues, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [token]);
 
   const handleCreateQueue = async (e: React.FormEvent) => {
     e.preventDefault();

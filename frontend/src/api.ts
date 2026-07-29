@@ -7,3 +7,15 @@ export const baseURL = import.meta.env.VITE_API_URL || '';
 export const api = axios.create({
   baseURL
 });
+
+// Automatically handle expired tokens
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('qf_token');
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
