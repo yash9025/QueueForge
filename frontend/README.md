@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# QueueForge - Operator Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This directory contains the frontend Operator Dashboard for QueueForge, built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The dashboard provides a real-time view into the QueueForge distributed job processing system. Operators can monitor the status of jobs, view worker health, and inspect items in the Dead Letter Queue (DLQ). It connects to the REST API via WebSockets for live updates.
 
-## React Compiler
+For the complete project overview and system architecture, please refer to the [main project README](../README.md).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Local Development
 
-## Expanding the Oxlint configuration
+To run the frontend dashboard independently for development purposes:
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+```bash
+# Install dependencies
+npm install
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# Start the development server
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The dashboard will be available at `http://localhost:5173`.
+
+> **Note:** The backend API and PostgreSQL database must be running to receive data on the dashboard. It is recommended to use the `docker compose up` command from the root directory to spin up the entire stack.

@@ -1,75 +1,92 @@
-# QueueForge ⚙️
+# QueueForge
 
-![CI](https://github.com/yash9025/QueueForge/actions/workflows/ci.yml/badge.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
+[![CI](https://github.com/yash9025/QueueForge/actions/workflows/ci.yml/badge.svg)](https://github.com/yash9025/QueueForge/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)](https://www.docker.com/)
 
-A production-grade, distributed job queue built from first principles on top of PostgreSQL. Designed to demonstrate deep understanding of distributed systems, concurrency, and failure recovery.
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Inter&pause=1000&color=2496ED&width=800&lines=Production-grade+distributed+job+queue;Built+from+first+principles+on+PostgreSQL;Designed+for+reliability+and+scale)](https://git.io/typing-svg)
 
-## 🚀 Problem Statement
+QueueForge is a robust, distributed job processing queue architected from first principles. Utilizing PostgreSQL as the primary source of truth, it provides durable job storage and reliable distribution to a pool of independent worker processes. The system guarantees exact retry mechanisms, graceful failure recovery, and strict exactly-once processing semantics without relying on external message brokers.
 
-Modern applications frequently need to run work outside the request/response cycle (sending emails, video transcoding, etc). Doing this synchronously makes the system fragile. This project builds a distributed job queue that durably stores work and reliably distributes it to a pool of independent worker processes — with guarantees around retries, failure recovery, and exactly-once processing semantics.
+## Problem Statement
 
-## 🏛️ Architecture
+Modern distributed applications frequently require asynchronous execution of compute-intensive or latency-sensitive tasks (e.g., sending emails, report generation, video transcoding). Synchronous execution within the request/response cycle introduces fragility and latency. QueueForge addresses this by decoupling task submission from execution, durably persisting work items, and orchestrating a fleet of scalable workers to process them efficiently.
 
-QueueForge uses PostgreSQL as the single source of truth for coordination, leveraging `FOR UPDATE SKIP LOCKED` for atomic, race-condition-free job claiming without needing a separate message broker like Redis or RabbitMQ.
+## System Design Architecture
 
-```text
-[Client] 
-   │ (POST /jobs)
-   ▼
-[REST API] ────(WebSocket)────> [Operator Dashboard]
-   │
-   │ (INSERT)
-   ▼
-[Postgres Database] <────(SKIP LOCKED)───── [Worker Pool (x3)]
-   ▲                                              │
-   │ (Clean stuck jobs)                           │
-[Reaper Process] <────────────────────────────────┘
+The architecture eliminates the need for standalone message brokers by leveraging advanced PostgreSQL features for coordination.
+
+```mermaid
+flowchart TB
+    subgraph External
+        C[Client Applications]
+    end
+
+    subgraph API Layer
+        API[REST API Server]
+        Dash[Operator Dashboard]
+    end
+
+    subgraph Storage
+        DB[(PostgreSQL Database)]
+    end
+
+    subgraph Computation
+        W1[Worker Node 1]
+        W2[Worker Node 2]
+        W3[Worker Node 3]
+        RP[Reaper Process]
+    end
+
+    C -->|POST /jobs| API
+    API <-->|WebSocket| Dash
+    API -->|INSERT jobs| DB
+    
+    DB <-->|SELECT FOR UPDATE SKIP LOCKED| W1
+    DB <-->|SELECT FOR UPDATE SKIP LOCKED| W2
+    DB <-->|SELECT FOR UPDATE SKIP LOCKED| W3
+    
+    RP -->|Polls & resets stuck jobs| DB
+
+    classDef database fill:#336791,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef worker fill:#2496ED,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef api fill:#4CAF50,stroke:#fff,stroke-width:2px,color:#fff;
+    
+    class DB database;
+    class W1,W2,W3,RP worker;
+    class API,Dash api;
 ```
 
-## 🧠 Key Design Decisions
+## Key Design Decisions
 
-### Why PostgreSQL over Redis/RabbitMQ?
-Using Postgres's `SELECT ... FOR UPDATE SKIP LOCKED` provides safe concurrent job claiming without a separate broker. This simplifies the infrastructure stack (no Redis needed) while maintaining strong ACID guarantees for job durability.
+### PostgreSQL for Concurrency Control
+Rather than introducing additional infrastructure overhead with tools like Redis or RabbitMQ, QueueForge utilizes PostgreSQL's `SELECT ... FOR UPDATE SKIP LOCKED`. This provides atomic, race-condition-free job claiming. The database ensures strong ACID guarantees for job durability while maintaining a streamlined technology stack.
 
-### Concurrency & Locking
-Workers use `SKIP LOCKED` when polling. If Worker A locks row 1, Worker B's query will instantly skip row 1 and lock row 2 instead of blocking. This allows horizontal scaling of workers without database contention.
+### Lock-Free Horizontal Scaling
+Workers utilize the `SKIP LOCKED` directive during the polling phase. If a worker process locks a specific record, subsequent worker queries immediately bypass the locked row and claim the next available job. This completely eliminates database contention and allows the worker pool to scale horizontally without blocking.
 
-### Failure Handling & DLQ
-Jobs that throw exceptions are caught, and their `attempts` counter increments. They are requeued with an **exponential backoff** delay. If a job exceeds `max_attempts`, it is moved to a **Dead Letter Queue (DLQ)** (`status = 'dead_letter'`) to prevent poison-pill jobs from looping forever.
+### Fault Tolerance and Dead Letter Queue (DLQ)
+Jobs that encounter runtime exceptions are gracefully caught. The system increments an attempt counter and requeues the job utilizing an **exponential backoff** strategy. To prevent infinite processing loops (poison-pill jobs), any task exceeding the configured `max_attempts` threshold is automatically routed to a Dead Letter Queue (`status = 'dead_letter'`) for manual inspection.
 
-### The Reaper Process
-If a worker crashes mid-job (OOM, killed), the job remains stuck in `running` state with a lock. The independent **Reaper** process runs every minute to find `running` jobs whose worker hasn't sent a heartbeat recently, forcibly returning them to `pending`.
+### Autonomous Reaper Process
+In distributed systems, worker nodes may experience catastrophic failures (e.g., OOM kills, hardware faults) while actively processing a job. Such jobs remain locked in a `running` state. QueueForge employs an independent **Reaper** process that continuously monitors worker health via heartbeats. If a worker fails to emit a heartbeat within the acceptable threshold, the Reaper forcibly reclaims the stalled jobs and resets them to a `pending` state for reassignment.
 
-## 🛠️ Setup & Running Locally
+## Setup & Running Locally
 
-QueueForge is fully containerised. 
+QueueForge is fully containerized, ensuring a consistent environment across development and production.
 
 ```bash
 # Clone the repository
 git clone https://github.com/yash9025/QueueForge.git
 cd QueueForge
 
-# Start the entire stack (API, 3x Workers, Reaper, Postgres, Dashboard, Seeder)
+# Provision the entire stack (API, Workers, Reaper, Postgres, Dashboard, Seeder)
 docker compose up --build
 ```
 
-The stack will expose:
+### Services Exposed
+
 - **API Server:** `http://localhost:3000`
-- **Dashboard:** `http://localhost:5173` (Login: `admin` / `secret123`)
-
-## 🎤 Interview Talking Points
-
-1. **"How do you prevent double-processing?"**
-   We use Postgres row-level locks combined with `SKIP LOCKED`. The database guarantees that the `UPDATE` returning the row is atomic, so two workers can never claim the same job ID.
-
-2. **"What happens when a worker crashes?"**
-   The job stays locked in `running` state. However, workers emit a heartbeat every 5 seconds. The background Reaper process scans for jobs held by workers whose heartbeat is older than a threshold (e.g., 2 minutes) and resets them to `pending`.
-
-3. **"How would you scale this further?"**
-   Currently, we poll the database. At very high scale (>10k jobs/sec), polling adds load. I would introduce `LISTEN/NOTIFY` in Postgres to push wake-up events to workers, or partition the `jobs` table by queue name.
-
-4. **"Why the separation of API and Workers?"**
-   It allows asymmetric scaling. We can run 2 API nodes to handle web traffic, but 50 worker nodes to handle heavy CPU-bound background processing independently.
+- **Dashboard:** `http://localhost:5173`
+  - *Default Credentials:* `admin` / `secret123`
